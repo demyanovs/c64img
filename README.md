@@ -24,11 +24,26 @@ The image can contain any number of colors, it will be automatically converted t
 
 ## Installation
 
-c64img generator is written in the go programming language and can be built with the go command:
+### From Binary
 
-```bash
-go build .\c64img.go
-```
+You can use pre-built binary for your OS from the release.
+
+### From Source
+
+To install from the source code, you need to have Go installed on your machine. If you don't have Go installed, you can download it from the [official website](https://go.dev/dl/).
+
+1. Clone the repository:
+
+    ```sh
+    git clone https://github.com/demyanovs/c64img.git
+    cd c64img
+    ```
+
+2. Build the project:
+
+    ```sh
+    go build -o c64img main.go
+    ```
 
 ## Usage
 
@@ -40,7 +55,7 @@ go build .\c64img.go
 -i - path to the input image (required)
 -f - path to the file where the generated BASIC program will be stored
 -o - path to the output image comverted to Commodore 64 palette
--dither - use the Floyd–Steinberg dithering algorithm to convert the image (by default "false")
+-dither - use the Floyd–Steinberg dithering algorithm to convert the image Default is `false`.
 ```
 
 You can always run for help:

@@ -13,9 +13,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	_ "golang.org/x/lint"
 )
 
-type RGBAColor struct {
+type colorRGBA struct {
 	R uint32
 	G uint32
 	B uint32
@@ -70,13 +72,13 @@ func main() {
 
 	flag.Parse()
 
-	if "" == *inputImage {
+	if *inputImage == "" {
 		println("-i flag is required. Type -help for help")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	imageFile, err := os.Open(fmt.Sprintf("%s", *inputImage))
+	imageFile, err := os.Open(*inputImage)
 
 	if err != nil {
 		fmt.Println("file not found!")
@@ -92,14 +94,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if "" == *outputImage {
+	if *outputImage == "" {
 		*outputImage = fmt.Sprintf("%s%s", imgOutNameDefault, filepath.Ext(*inputImage))
 	}
 
 	if imageConfig.Width != imgWidth || imageConfig.Height != imgHeight {
-		fmt.Println(
-			fmt.Sprintf("Wrong image size. Expected %dx%d, got: %dx%d",
-				imgWidth, imgHeight, imageConfig.Width, imageConfig.Height))
+		fmt.Printf("Wrong image size. Expected %dx%d, got: %dx%d\n",
+			imgWidth, imgHeight, imageConfig.Width, imageConfig.Height)
 		os.Exit(1)
 	}
 
@@ -167,9 +168,9 @@ func detectPixelColorCode(color color.Color) int {
 	return 0
 }
 
-func transformRGBAToRGBAColor(color color.Color) RGBAColor {
+func transformRGBAToRGBAColor(color color.Color) colorRGBA {
 	r, g, b, a := color.RGBA()
-	rgbaColor := RGBAColor{
+	rgbaColor := colorRGBA{
 		R: r,
 		G: g,
 		B: b,
