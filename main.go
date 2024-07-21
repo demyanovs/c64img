@@ -132,9 +132,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	points := getPoints(*dst)
+	points := pointsFromImage(*dst)
 
-	err = writeImageCode(points, *outputFile)
+	err = writeBASICProgram(points, *outputFile)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -142,12 +142,12 @@ func main() {
 	fmt.Println("finished")
 }
 
-func getPoints(dst image.Paletted) []int {
+func pointsFromImage(dst image.Paletted) []int {
 	var points []int
 
 	for y := 0; y < imgHeight; y++ {
 		for x := 0; x < imgWidth; x++ {
-			colorCode := detectPixelColorCode(dst.At(x, y))
+			colorCode := pixelColorCode(dst.At(x, y))
 			points = append(points, colorCode)
 		}
 	}
@@ -155,7 +155,7 @@ func getPoints(dst image.Paletted) []int {
 	return points
 }
 
-func detectPixelColorCode(color color.Color) int {
+func pixelColorCode(color color.Color) int {
 	colorFromPixel := transformRGBAToRGBAColor(color)
 
 	for i, colorP := range colorPallet {
@@ -180,7 +180,7 @@ func transformRGBAToRGBAColor(color color.Color) colorRGBA {
 	return rgbaColor
 }
 
-func writeImageCode(points []int, outputFile string) error {
+func writeBASICProgram(points []int, outputFile string) error {
 	file, err := os.Create(outputFile)
 	if err != nil {
 		return err

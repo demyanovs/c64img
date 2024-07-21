@@ -1,7 +1,4 @@
-# This workflow will build a golang project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
-
-name: Go
+name: build
 
 on:
   push:
@@ -10,8 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
+    name: Test & Build
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -21,11 +18,23 @@ jobs:
       with:
         go-version: '1.22'
 
-    - name: Build
-      run: go build -v ./...
+    - name: Run go mod tidy
+      run: |
+        set -e
+        go mod tidy
+        output=$(git status -s)
+        if [ -z "${output}" ]; then
+         exit 0
+        fi
+        echo 'Please run `go mod tidy` on your branch, commit and push again.'
+        echo "$output"
+        exit 1
 
     - name: Test
       run: go test -v ./...
 
-    - name: Linter
+    - name: Lint
       run: go run golang.org/x/lint/golint -set_exit_status $(go list ./...)
+
+    - name: Build
+      run: go build -v ./...

@@ -1,5 +1,4 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/demyanovs/c64img.svg)](https://pkg.go.dev/github.com/demyanovs/c64img)
-
+[![](https://github.com/demyanovs/c64img/actions/workflows/go.yml/badge.svg)](https://github.com/demyanovs/c64img/actions) [![Go Reference](https://pkg.go.dev/badge/github.com/demyanovs/c64img.svg)](https://pkg.go.dev/github.com/demyanovs/c64img)
 # c64img
 
 c64img is a generator of a BASIC program for Commodore 64 that draws a simple image on the screen using colored characters from a provided static image.
@@ -53,12 +52,12 @@ To install from the source code, you need to have Go installed on your machine. 
 ./c64img -i img.png -f img.basic -o out.png -dither
 ```
 
-```
--i - path to the input image (required)
--f - path to the file where the generated BASIC program will be stored
--o - path to the output image comverted to Commodore 64 palette
--dither - use the Floyd–Steinberg dithering algorithm to convert the image. Default is `false`.
-```
+### Command-Line Options
+
+- `-i` **(required)**: path to the input image (required).
+- `-f`: path to the file where the generated BASIC program will be stored.
+- `-o`: path to the output image converted to Commodore 64 palette.
+- `-dither`: uses the Floyd–Steinberg dithering algorithm to convert the image. Default is `false`.
 
 You can always run for help:
 ```bash
