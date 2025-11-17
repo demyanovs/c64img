@@ -1,0 +1,8 @@
+# Test output
+*.test
+*.out
+coverage.out
+
+# IDE
+.idea/
+.vscode/

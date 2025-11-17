@@ -19,9 +19,9 @@ The array of color codes is then written to the file as a BASIC program using th
 
 ## Requirements
 
-The source image must be in one of the formats: jpeg, png or gif and have a resolution of 40x25 pixels.
-
-The image can contain any number of colors, it will be automatically converted to the Commodore 64 predefined palette.
+- **Format**: JPEG, PNG, or GIF
+- **Resolution**: Must be exactly 40×25 pixels
+- **Colors**: Any number (automatically converted to C64's 16-color palette)
 
 ## Installation
 
@@ -33,28 +33,34 @@ You can use pre-built binary for your OS from the release.
 
 To install from the source code, you need to have Go installed on your machine. If you don't have Go installed, you can download it from the [official website](https://go.dev/dl/).
 
-1. Clone the repository:
+#### Option 1: Go Install (recommended)
+```bash
+go install github.com/demyanovs/c64img@latest
+```
 
-    ```sh
-    git clone https://github.com/demyanovs/c64img.git
-    cd c64img
-    ```
-
-2. Build the project:
-
-    ```sh
-    go build -o c64img main.go
-    ```
+#### Option 2: Build from source
+```bash
+git clone https://github.com/demyanovs/c64img.git
+cd c64img
+go build -o c64img
+```
 
 ## Usage
-
 ```bash
-./c64img -i img.png -f img.basic -o out.png -dither
+./c64img -i input.png -f output.basic -o output.png -dither
+```
+
+### Example
+```bash
+# Convert an image with dithering
+./c64img -i example/input_01.png -f yoda.basic -o yoda_preview.png -dither
+
+# Simple conversion without dithering
+./c64img -i example/input_02.png -f c64logo.basic
 ```
 
 ### Command-Line Options
-
-- `-i` **(required)**: path to the input image (required).
+- `-i` **(required)**: path to the input image.
 - `-f`: path to the file where the generated BASIC program will be stored.
 - `-o`: path to the output image converted to Commodore 64 palette.
 - `-dither`: uses the Floyd–Steinberg dithering algorithm to convert the image. Default is `false`.
@@ -66,9 +72,35 @@ You can always run for help:
 
 ## Screenshots
 <p align="center">
-    <img src="https://demyanov.dev/images/go/c64img/img_01_400.png" style=" width:400px;"  alt="yoda">
-    <img src="https://demyanov.dev/images/go/c64img/img_02_400.png" style=" width:400px;"  alt="c64 logo">
+    <img src="example/scr_01.png" width="400"  alt="yoda">
+    <img src="example/scr_02.png" width="400"  alt="c64 logo">
 </p>
+
+## Example images
+
+Example 40x25 input pixel images can be found here:
+
+- [input_01.png](example/input_01.png)<br/>
+- [input_02.png](example/input_02.png)
+
+## Tests
+
+### Run all tests
+```bash
+go test -v
+```
+
+### Coverage
+```bash
+go test -cover
+go test -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
+### Benchmarks
+```bash
+go test -bench=. -benchmem
+```
 
 ## Credits
 This generator was inspired by [64bites](https://64bites.com/blog/2015/05/31/create-a-1k-image-for-c64-with-ruby/) video series.

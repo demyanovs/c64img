@@ -13,8 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	_ "golang.org/x/lint"
 )
 
 type colorRGBA struct {
@@ -24,7 +22,7 @@ type colorRGBA struct {
 	A uint32
 }
 
-var colorPallet = []color.Color{
+var colorPalette = []color.Color{
 	color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xff}, // Black       - 0
 	color.RGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}, // White       - 1
 	color.RGBA{R: 0x9f, G: 0x4e, B: 0x44, A: 0xff}, // Red         - 2
@@ -43,11 +41,19 @@ var colorPallet = []color.Color{
 	color.RGBA{R: 0xad, G: 0xad, B: 0xad, A: 0xff}, // Light Gray  - 15
 }
 
+var colorToIndex map[colorRGBA]int
+
 const (
 	imgWidth          = 40
 	imgHeight         = 25
 	imgOutNameDefault = "out"
-	header            = "" +
+
+	// BASIC program constants
+	dataRowSize        = 20   // Number of color values per DATA line
+	basicStartLine     = 1000 // Starting line number for DATA statements
+	basicLineIncrement = 10   // Increment between DATA line numbers
+
+	header = "" +
 		"10 for y = 0 to 24\n" +
 		"20 for x = 0 to 39\n" +
 		"30 o = 40 * y + x\n" +
@@ -62,6 +68,11 @@ func init() {
 	image.RegisterFormat("jpeg", "jpeg", jpeg.Decode, jpeg.DecodeConfig)
 	image.RegisterFormat("gif", "gif", gif.Decode, gif.DecodeConfig)
 	image.RegisterFormat("png", "png", png.Decode, png.DecodeConfig)
+
+	colorToIndex = make(map[colorRGBA]int, len(colorPalette))
+	for i, c := range colorPalette {
+		colorToIndex[transformRGBAToRGBAColor(c)] = i
+	}
 }
 
 func main() {
@@ -73,77 +84,83 @@ func main() {
 	flag.Parse()
 
 	if *inputImage == "" {
-		println("-i flag is required. Type -help for help")
+		fmt.Println("-i flag is required. Type -help for help")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
-	imageFile, err := os.Open(*inputImage)
-
-	if err != nil {
-		fmt.Println("file not found!")
-		os.Exit(1)
-	}
-
-	defer imageFile.Close()
-
-	imageConfig, _, err := image.DecodeConfig(imageFile)
-
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if *outputImage == "" {
-		*outputImage = fmt.Sprintf("%s%s", imgOutNameDefault, filepath.Ext(*inputImage))
-	}
-
-	if imageConfig.Width != imgWidth || imageConfig.Height != imgHeight {
-		fmt.Printf("Wrong image size. Expected %dx%d, got: %dx%d\n",
-			imgWidth, imgHeight, imageConfig.Width, imageConfig.Height)
-		os.Exit(1)
-	}
-
-	_, err = imageFile.Seek(0, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	img, _, err := image.Decode(imageFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	dst := image.NewPaletted(img.Bounds(), colorPallet)
-	drawer := draw.Drawer(draw.Src)
-	if *dither {
-		drawer = draw.FloydSteinberg
-	}
-	drawer.Draw(dst, dst.Bounds(), img, img.Bounds().Min)
-
-	dstFile, err := os.Create(*outputImage)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer dstFile.Close()
-
-	err = png.Encode(dstFile, dst)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	points := pointsFromImage(*dst)
-
-	err = writeBASICProgram(points, *outputFile)
-	if err != nil {
+	if err := processImage(*inputImage, *outputImage, *outputFile, *dither); err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Println("finished")
 }
 
+func processImage(inputPath, outputPath, basicPath string, useDither bool) error {
+	imageFile, err := os.Open(inputPath)
+	if err != nil {
+		return fmt.Errorf("failed to open image file: %w", err)
+	}
+	defer imageFile.Close()
+
+	imageConfig, _, err := image.DecodeConfig(imageFile)
+	if err != nil {
+		return fmt.Errorf("failed to decode image config: %w", err)
+	}
+
+	if imageConfig.Width != imgWidth || imageConfig.Height != imgHeight {
+		return fmt.Errorf("wrong image size: expected %dx%d, got %dx%d",
+			imgWidth, imgHeight, imageConfig.Width, imageConfig.Height)
+	}
+
+	if outputPath == "" {
+		outputPath = fmt.Sprintf("%s%s", imgOutNameDefault, filepath.Ext(inputPath))
+	}
+
+	if _, err := imageFile.Seek(0, 0); err != nil {
+		return fmt.Errorf("failed to seek to start of file: %w", err)
+	}
+
+	img, _, err := image.Decode(imageFile)
+	if err != nil {
+		return fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	dst := image.NewPaletted(img.Bounds(), colorPalette)
+	drawer := draw.Drawer(draw.Src)
+	if useDither {
+		drawer = draw.FloydSteinberg
+	}
+	drawer.Draw(dst, dst.Bounds(), img, img.Bounds().Min)
+
+	if err := saveImage(dst, outputPath); err != nil {
+		return err
+	}
+
+	points := pointsFromImage(*dst)
+	if err := generateBASICProgram(points, basicPath); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func saveImage(img *image.Paletted, path string) error {
+	outFile, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("failed to create output image: %w", err)
+	}
+	defer outFile.Close()
+
+	if err := png.Encode(outFile, img); err != nil {
+		return fmt.Errorf("failed to encode PNG: %w", err)
+	}
+
+	return nil
+}
+
 func pointsFromImage(dst image.Paletted) []int {
-	var points []int
+	points := make([]int, 0, imgWidth*imgHeight)
 
 	for y := 0; y < imgHeight; y++ {
 		for x := 0; x < imgWidth; x++ {
@@ -155,66 +172,54 @@ func pointsFromImage(dst image.Paletted) []int {
 	return points
 }
 
-func pixelColorCode(color color.Color) int {
-	colorFromPixel := transformRGBAToRGBAColor(color)
+func pixelColorCode(c color.Color) int {
+	colorFromPixel := transformRGBAToRGBAColor(c)
 
-	for i, colorP := range colorPallet {
-		colorFromPallet := transformRGBAToRGBAColor(colorP)
-		if colorFromPixel == colorFromPallet {
-			return i
-		}
+	if index, exists := colorToIndex[colorFromPixel]; exists {
+		return index
 	}
 
 	return 0
 }
 
-func transformRGBAToRGBAColor(color color.Color) colorRGBA {
-	r, g, b, a := color.RGBA()
-	rgbaColor := colorRGBA{
-		R: r,
-		G: g,
-		B: b,
-		A: a,
-	}
-
-	return rgbaColor
+func transformRGBAToRGBAColor(c color.Color) colorRGBA {
+	r, g, b, a := c.RGBA()
+	return colorRGBA{R: r, G: g, B: b, A: a}
 }
 
-func writeBASICProgram(points []int, outputFile string) error {
+func generateBASICProgram(points []int, outputFile string) error {
 	file, err := os.Create(outputFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create BASIC file: %w", err)
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(header)
-	if err != nil {
-		return err
+	if _, err := file.WriteString(header); err != nil {
+		return fmt.Errorf("failed to write header: %w", err)
 	}
 
-	rowSize := 20
+	rows := splitIntoRows(points, dataRowSize)
 
-	var rows [][]int
-	for i := 0; i < len(points); i += rowSize {
-		end := i + rowSize
-
-		if end > len(points) {
-			end = len(points)
-		}
-
-		rows = append(rows, points[i:end])
-	}
-
-	lineNum := 1000
+	lineNum := basicStartLine
 	for _, row := range rows {
 		colorSeq := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(row)), ","), "[]")
-		_, err = file.WriteString(fmt.Sprintf("%d data %s \n", lineNum, colorSeq))
-		if err != nil {
-			fmt.Printf("error writing string: %v", err)
+		if _, err := file.WriteString(fmt.Sprintf("%d data %s\n", lineNum, colorSeq)); err != nil {
+			return fmt.Errorf("failed to write data line %d: %w", lineNum, err)
 		}
-
-		lineNum += 10
+		lineNum += basicLineIncrement
 	}
 
 	return nil
+}
+
+func splitIntoRows(points []int, rowSize int) [][]int {
+	var rows [][]int
+	for i := 0; i < len(points); i += rowSize {
+		end := i + rowSize
+		if end > len(points) {
+			end = len(points)
+		}
+		rows = append(rows, points[i:end])
+	}
+	return rows
 }
